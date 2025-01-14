@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "c2c"
-version = "1.0.0"
+version = "1.0.1"
 authors = [
     { name="Yoshikazu Kawataki", email="kawataki-yoshika@dmm.com" },
 ]
