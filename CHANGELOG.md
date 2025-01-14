@@ -1,4 +1,9 @@
-# [](https://github.com/ykawataki/c2c/compare/v1.0.0...v) (2025-01-14)
+# [](https://github.com/ykawataki/c2c/compare/v1.0.1...v) (2025-01-14)
+
+
+### Bug Fixes
+
+* fixed README.md ([fe3cf63](https://github.com/ykawataki/c2c/commit/fe3cf6364926d1760115dbf54cbb34c33e737cb6))
 
 
 
