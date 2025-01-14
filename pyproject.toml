@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "c2c"
 version = "1.0.2"
 authors = [
-    { name="Yoshikazu Kawataki", email="kawataki-yoshika@dmm.com" },
+    { name="Yoshikazu Kawataki", email="y.kawataki@gmail.com" },
 ]
 description = "Convert directory structure into a single text file while respecting .gitignore rules"
 readme = "README.md"
