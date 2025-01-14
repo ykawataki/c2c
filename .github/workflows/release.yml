@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main # 明示的にmainブランチを指定
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Install dependencies
+        run: npm install -g conventional-changelog-cli
+
+      - name: Generate changelog
+        run: |
+          conventional-changelog -p angular -i CHANGELOG.md -s -r 0
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: CHANGELOG.md
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit updated CHANGELOG
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add CHANGELOG.md
+          git commit -m "docs: update changelog for ${{ github.ref_name }}" || exit 0
+          git push origin main # 明示的にmainブランチを指定してプッシュ

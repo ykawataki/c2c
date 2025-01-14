@@ -1,0 +1,45 @@
+{
+    "name": "dir2aisnap development",
+    "dockerFile": "Dockerfile",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode",
+                "davidanson.vscode-markdownlint",
+                "yzhang.markdown-all-in-one",
+                "amazonwebservices.aws-toolkit-vscode",
+                "eamodio.gitlens",
+                "github.copilot",
+                "bradlc.vscode-tailwindcss",
+                "ms-python.isort",
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "python.linting.enabled": true,
+                "python.linting.pylintEnabled": true,
+                "editor.formatOnSave": true,
+                "editor.codeActionsOnSave": {
+                    "source.fixAll.eslint": true,
+                    "source.organizeImports": true
+                },
+                "files.exclude": {
+                    "**/.git": true,
+                    "**/.DS_Store": true,
+                    "**/Thumbs.db": true,
+                    "**/__pycache__": true,
+                    "**/.pytest_cache": true
+                }
+            }
+        }
+    },
+    "mounts": [
+        "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind,consistency=cached"
+    ],
+    "remoteUser": "vscode",
+    "containerEnv": {
+		"GOOGLE_APPLICATION_CREDENTIALS": "${containerWorkspaceFolder}/.devcontainer/gcp_credentials.json",
+    }
+}
