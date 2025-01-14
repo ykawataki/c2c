@@ -1,4 +1,4 @@
-# [](https://github.com/ykawataki/c2c/compare/v0.1.0...v) (2025-01-14)
+# [](https://github.com/ykawataki/c2c/compare/v1.0.0...v) (2025-01-14)
 
 
 
