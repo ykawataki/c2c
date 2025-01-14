@@ -31,7 +31,7 @@ pip install c2c
 
 Or install from source:
 ```bash
-git clone https://github.com/kawatakiyoshikazu/c2c.git
+git clone https://github.com/kawataki-yoshika/c2c.git
 cd c2c
 pip install .
 ```
