@@ -123,7 +123,6 @@ class TestFileOperations(unittest.TestCase):
 class TestDirectoryScanning(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
-
         # Create test directory structure
         self.create_test_structure()
 
@@ -156,8 +155,18 @@ class TestDirectoryScanning(unittest.TestCase):
         sys.stdout = captured_output
 
         try:
-            delimiter = create_delimiter()
-            scan_directory(self.temp_dir, [".git"], delimiter)
+            # 一時ファイルにスキャン結果を書き出す
+            with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8', delete=False) as temp_file:
+                temp_path = temp_file.name
+                delimiter = create_delimiter()
+                scan_directory(self.temp_dir, [".git"], delimiter, temp_file)
+
+            # 一時ファイルの内容を captured_output に書き出す
+            with open(temp_path, 'r', encoding='utf-8') as f:
+                captured_output.write(f.read())
+
+            # クリーンアップ
+            os.unlink(temp_path)
 
             output = captured_output.getvalue()
 

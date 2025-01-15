@@ -13,6 +13,7 @@ A Python package that converts a directory structure into a single text file, pr
   - Automatically detects and excludes binary files to maintain output integrity
   - Full UTF-8 encoding support with proper error handling
   - Generates unique, collision-free delimiters to clearly separate files
+  - Memory-efficient processing for large files
 - **Flexible Configuration**:
   - Custom exclude patterns via command line arguments or Python API
   - Debug mode for troubleshooting pattern matching
@@ -75,24 +76,29 @@ from c2c import scan_directory, create_delimiter
 # Generate a unique delimiter
 delimiter = create_delimiter()
 
-# Basic usage with default excludes
-scan_directory(
-    directory=".",
-    exclude_patterns=[".git"],  # Default exclude pattern
-    delimiter=delimiter
-)
+# Create a file to write the output
+with open('output.txt', 'w', encoding='utf-8') as output_file:
+    # Basic usage with default excludes
+    scan_directory(
+        directory=".",
+        exclude_patterns=[".git"],  # Default exclude pattern
+        delimiter=delimiter,
+        output_file=output_file
+    )
 
 # With custom exclude patterns
-scan_directory(
-    directory="/path/to/project",
-    exclude_patterns=[
-        ".git",  # Default
-        "*.log",
-        "temp/*"
-    ],
-    delimiter=delimiter,
-    debug=True
-)
+with open('output.txt', 'w', encoding='utf-8') as output_file:
+    scan_directory(
+        directory="/path/to/project",
+        exclude_patterns=[
+            ".git",  # Default
+            "*.log",
+            "temp/*"
+        ],
+        delimiter=delimiter,
+        output_file=output_file,
+        debug=True
+    )
 ```
 
 ### Using with AI Language Models
@@ -169,6 +175,13 @@ The GitignoreRule system provides full Git-compatible pattern matching:
 - Pattern processing order matches Git behavior
 - Scoped rules based on `.gitignore` file location
 - Full support for pattern negation and complex rule combinations
+
+### Memory Efficiency
+
+- Efficient file handling using buffered I/O
+- Streaming output for large files
+- Minimal memory footprint even with large codebases
+- Proper resource cleanup
 
 ## Contributing
 

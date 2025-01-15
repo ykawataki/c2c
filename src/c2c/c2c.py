@@ -5,9 +5,10 @@ import logging
 import os
 import sys
 import uuid
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import List, TextIO
 
 
 def setup_logger(debug: bool = False) -> logging.Logger:
@@ -179,7 +180,7 @@ def find_all_gitignores(start_dir: str) -> List[str]:
     ]
 
 
-def scan_directory(directory: str, exclude_patterns: List[str], delimiter: str, debug: bool = False) -> None:
+def scan_directory(directory: str, exclude_patterns: List[str], delimiter: str, output_file: TextIO, debug: bool = False) -> None:
     logger = logging.getLogger("c2c")
     directory = os.path.abspath(directory)
 
@@ -191,7 +192,7 @@ def scan_directory(directory: str, exclude_patterns: List[str], delimiter: str, 
     for gitignore_path in find_all_gitignores(directory):
         gitignore_handler.add_rules_from_file(gitignore_path)
 
-    print(create_header(delimiter))
+    print(create_header(delimiter), file=output_file)
 
     for root, dirs, files in os.walk(directory):
         if '.git' in dirs:
@@ -222,8 +223,8 @@ def scan_directory(directory: str, exclude_patterns: List[str], delimiter: str, 
                 with open(abs_path, 'r', encoding='utf-8') as f:
                     content = f.read()
 
-                print(f"{delimiter}{rel_path}")
-                print(content)
+                print(f"{delimiter}{rel_path}", file=output_file)
+                print(content, file=output_file)
 
             except Exception as e:
                 logger.error(f"Error reading file {rel_path}: {e}")
@@ -249,11 +250,32 @@ def main():
     try:
         setup_logger(args.debug)
         delimiter = create_delimiter()
-        scan_directory(args.directory, default_excludes +
-                       args.exclude, delimiter, debug=args.debug)
+        
+        # 一時ファイルを作成して内容を書き出す
+        with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8', delete=False) as temp_file:
+            temp_path = temp_file.name
+            scan_directory(args.directory, default_excludes + args.exclude, 
+                         delimiter, temp_file, debug=args.debug)
+        
+        # 一時ファイルの内容を少しずつ読み込んで標準出力に出力
+        with open(temp_path, 'r', encoding='utf-8') as f:
+            while True:
+                chunk = f.read(8192)  # 8KBずつ読み込み
+                if not chunk:
+                    break
+                sys.stdout.write(chunk)
+        
+        # 一時ファイルを削除
+        os.unlink(temp_path)
+            
     except Exception as e:
         logger = logging.getLogger("c2c")
         logger.error(f"Unexpected error: {e}")
+        if 'temp_path' in locals():
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
         sys.exit(1)
 
 

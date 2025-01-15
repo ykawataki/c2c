@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "c2c"
-version = "1.0.3"
+version = "1.0.4"
 authors = [
     { name="Yoshikazu Kawataki", email="y.kawataki@gmail.com" },
 ]
@@ -22,8 +22,7 @@ classifiers = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/kawataki-yoshika/c2c"
-"Bug Tracker" = "https://github.com/kawataki-yoshika/c2c/issues"
+"Source" = "https://github.com/ykawataki/c2c"
 
 [project.scripts]
 c2c = "c2c.c2c:main"
