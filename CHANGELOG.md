@@ -1,4 +1,9 @@
-# [](https://github.com/ykawataki/c2c/compare/v1.0.3...v) (2025-01-14)
+# [](https://github.com/ykawataki/c2c/compare/v1.0.4...v) (2025-01-15)
+
+
+### Bug Fixes
+
+* update version to 1.0.4 ([e12d4f4](https://github.com/ykawataki/c2c/commit/e12d4f4277d57eb917bde305590079e569431ae7))
 
 
 
