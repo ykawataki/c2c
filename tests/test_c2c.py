@@ -4,88 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from c2c.c2c import (GitignoreHandler, GitignoreRule, create_delimiter,
-                     create_header, find_all_gitignores, is_binary_file,
+from c2c.c2c import (create_delimiter, create_header, is_binary_file,
                      scan_directory)
-
-
-class TestGitignoreRule(unittest.TestCase):
-    def test_basic_pattern_matching(self):
-        rule = GitignoreRule("*.txt", ".")
-        self.assertTrue(rule.matches("test.txt"))
-        self.assertTrue(rule.matches("dir/test.txt"))
-        self.assertFalse(rule.matches("test.py"))
-
-    def test_directory_pattern(self):
-        rule = GitignoreRule("temp/", ".")
-        self.assertTrue(rule.matches("temp", is_dir=True))
-        self.assertTrue(rule.matches("dir/temp", is_dir=True))
-        self.assertFalse(rule.matches("temp.txt"))
-        self.assertFalse(rule.matches("temp", is_dir=False))
-
-    def test_negation_pattern(self):
-        rule = GitignoreRule("!important.txt", ".")
-        self.assertTrue(rule.matches("important.txt"))
-        self.assertFalse(rule.matches("other.txt"))
-        self.assertTrue(rule.is_negation)
-
-    def test_base_directory_scoping(self):
-        rule = GitignoreRule("*.txt", "src")
-        self.assertTrue(rule.matches("src/test.txt"))
-        self.assertFalse(rule.matches("test.txt"))
-        self.assertTrue(rule.matches("src/subdir/test.txt"))
-
-    def test_root_pattern(self):
-        rule = GitignoreRule("/root.txt", ".")
-        self.assertTrue(rule.matches("root.txt"))
-        self.assertFalse(rule.matches("dir/root.txt"))
-
-
-class TestGitignoreHandler(unittest.TestCase):
-    def setUp(self):
-        self.temp_dir = tempfile.mkdtemp()
-        self.handler = GitignoreHandler(self.temp_dir)
-
-    def tearDown(self):
-        shutil.rmtree(self.temp_dir)
-
-    def test_basic_ignore(self):
-        self.handler.rules.append(GitignoreRule("*.txt", "."))
-        self.assertTrue(self.handler.should_ignore("test.txt"))
-        self.assertFalse(self.handler.should_ignore("test.py"))
-
-    def test_negation_override(self):
-        self.handler.rules.extend([
-            GitignoreRule("*.txt", "."),
-            GitignoreRule("!important.txt", ".")
-        ])
-        self.assertTrue(self.handler.should_ignore("test.txt"))
-        self.assertFalse(self.handler.should_ignore("important.txt"))
-
-    def test_directory_rules(self):
-        self.handler.rules.append(GitignoreRule("temp/", "."))
-        self.assertTrue(self.handler.should_ignore("temp", is_dir=True))
-        self.assertFalse(self.handler.should_ignore("temp.txt"))
-
-    def test_multiple_gitignores(self):
-        # Create test directory structure
-        src_dir = os.path.join(self.temp_dir, "src")
-        os.makedirs(src_dir)
-
-        # Create root .gitignore
-        with open(os.path.join(self.temp_dir, ".gitignore"), "w") as f:
-            f.write("*.txt\n")
-
-        # Create src/.gitignore
-        with open(os.path.join(src_dir, ".gitignore"), "w") as f:
-            f.write("!important.txt\n")
-
-        handler = GitignoreHandler(self.temp_dir)
-        for gitignore in find_all_gitignores(self.temp_dir):
-            handler.add_rules_from_file(gitignore)
-
-        self.assertTrue(handler.should_ignore("test.txt"))
-        self.assertFalse(handler.should_ignore("src/important.txt"))
 
 
 class TestFileOperations(unittest.TestCase):
@@ -181,17 +101,6 @@ class TestDirectoryScanning(unittest.TestCase):
 
         finally:
             sys.stdout = sys.__stdout__
-
-    def test_find_all_gitignores(self):
-        # Create additional .gitignore in src directory
-        src_gitignore = os.path.join(self.temp_dir, "src", ".gitignore")
-        with open(src_gitignore, "w") as f:
-            f.write("*.pyc\n")
-
-        gitignores = find_all_gitignores(self.temp_dir)
-        self.assertEqual(len(gitignores), 2)
-        self.assertTrue(any(p.endswith("src/.gitignore") for p in gitignores))
-        self.assertTrue(any(p.endswith("/.gitignore") for p in gitignores))
 
 
 if __name__ == "__main__":

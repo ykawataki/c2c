@@ -4,24 +4,31 @@ A Python package that converts a directory structure into a single text file, pr
 
 ## Features
 
-- **Smart Directory Scanning**: Recursively scans directories and outputs contents as a single well-formatted text file with clear delimiters between files
-- **Git-Aware**: 
+- **Smart Directory Scanning**: 
+  - Recursively scans directories and outputs contents as a single well-formatted text file
+  - Clear delimiters between files for unambiguous parsing
+  - Memory-efficient streaming output for large codebases
+
+- **Git-Aware File Filtering**: 
+  - Built on top of the high-performance gitignore-filter library
   - Fully respects `.gitignore` rules at both root and subdirectory levels
-  - Handles negative patterns (patterns starting with `!`) correctly
-  - Supports multiple `.gitignore` files in subdirectories, just like Git
+  - Supports advanced patterns including negation and directory-specific rules
+
 - **Intelligent File Handling**:
-  - Automatically detects and excludes binary files to maintain output integrity
-  - Full UTF-8 encoding support with proper error handling
-  - Generates unique, collision-free delimiters to clearly separate files
-  - Memory-efficient processing for large files
+  - Automatic binary file detection and exclusion
+  - UTF-8 encoding support with robust error handling
+  - Unique, collision-free delimiters for file separation
+  - Efficient streaming I/O for large files
+
 - **Flexible Configuration**:
-  - Custom exclude patterns via command line arguments or Python API
-  - Debug mode for troubleshooting pattern matching
-  - Easy integration with both CLI and Python applications
+  - Custom exclude patterns using gitignore syntax
+  - Debug mode for troubleshooting pattern matches
+  - Simple CLI and Python API integration
+
 - **AI-Ready Output**: 
-  - Generates output specifically formatted for optimal use with AI language models
-  - Supports large language models like Claude, GPT-4, etc.
-  - Preserves directory structure and file relationships for better context
+  - Generates output optimized for AI language models
+  - Preserves directory structure and file relationships
+  - Clear metadata and file boundaries
 
 ## Installation
 
@@ -32,7 +39,7 @@ pip install c2c
 
 Or install from source:
 ```bash
-git clone https://github.com/kawataki-yoshika/c2c.git
+git clone https://github.com/ykawataki/c2c.git
 cd c2c
 pip install .
 ```
@@ -51,10 +58,24 @@ Scan specific directory:
 c2c /path/to/directory
 ```
 
-Exclude specific patterns:
+Exclude specific patterns using gitignore format:
 ```bash
-c2c . -e "*.log" -e "temp/*"
+# Exclude all log files
+c2c . -e "*.log"
+
+# Exclude temp directory
+c2c . -e "temp/"
+
+# Complex patterns
+c2c . -e "*.log" -e "!important.log" -e "debug/**/*.tmp"
 ```
+
+Supported pattern formats:
+- Simple patterns: `*.log`, `*.tmp`
+- Directory patterns: `temp/`, `build/`
+- Negative patterns: `!important.log`
+- Path-specific patterns: `src/*.log`
+- Nested patterns: `**/*.log`
 
 Enable debug mode to see pattern matching details:
 ```bash
@@ -68,7 +89,7 @@ c2c . > project_snapshot.txt
 
 ### Python API
 
-The package provides a flexible Python API for integration into your tools:
+The package provides a simple Python API for integration into your tools:
 
 ```python
 from c2c import scan_directory, create_delimiter
@@ -76,9 +97,8 @@ from c2c import scan_directory, create_delimiter
 # Generate a unique delimiter
 delimiter = create_delimiter()
 
-# Create a file to write the output
+# Basic usage
 with open('output.txt', 'w', encoding='utf-8') as output_file:
-    # Basic usage with default excludes
     scan_directory(
         directory=".",
         exclude_patterns=[".git"],  # Default exclude pattern
@@ -86,14 +106,15 @@ with open('output.txt', 'w', encoding='utf-8') as output_file:
         output_file=output_file
     )
 
-# With custom exclude patterns
+# With custom patterns
 with open('output.txt', 'w', encoding='utf-8') as output_file:
     scan_directory(
         directory="/path/to/project",
         exclude_patterns=[
-            ".git",  # Default
+            ".git",
             "*.log",
-            "temp/*"
+            "temp/*",
+            "!important.log"
         ],
         delimiter=delimiter,
         output_file=output_file,
@@ -103,7 +124,7 @@ with open('output.txt', 'w', encoding='utf-8') as output_file:
 
 ### Using with AI Language Models
 
-1. Generate a snapshot of your project:
+1. Generate a project snapshot:
 ```bash
 c2c . > context.txt
 ```
@@ -117,11 +138,11 @@ Here's my project structure and contents:
 Could you help me understand the code structure and suggest improvements?
 ```
 
-The output format is specifically designed to help AI models understand:
-- Project structure and hierarchical relationships
-- File contents with clear, unambiguous boundaries
-- Complete directory hierarchy and organization
+The output format is designed for optimal use with AI models:
+- Clear file boundaries with unique delimiters
+- Preserved directory structure and relationships
 - Metadata about excluded files and patterns
+- UTF-8 encoded text content only
 
 ## Output Format
 
@@ -142,54 +163,47 @@ The generated output follows this structure:
 [contents of helper.py]
 ```
 
-## Default Excludes
+## Default Behavior
 
-By default, c2c excludes:
-- `.git` directories and all Git-related files
-- Binary files (automatically detected)
-- Files matching any `.gitignore` patterns
+By default, c2c:
+- Excludes `.git` directories and Git-related files
+- Excludes binary files (automatically detected)
+- Respects all `.gitignore` patterns
+- Uses UTF-8 encoding for file reading/writing
+- Streams output for memory efficiency
 
-You can add additional patterns using the `-e` flag or through the Python API.
+## Implementation Details
 
-## Advanced Features
+### Pattern Matching
 
-### GitignoreRule Handling
+Built on the gitignore-filter library, c2c supports:
+- Full gitignore pattern syntax
+- Multiple `.gitignore` files with proper precedence
+- Pattern negation with `!`
+- Directory-specific patterns
+- Path-based pattern scoping
 
-The GitignoreRule system provides full Git-compatible pattern matching:
-- Base directory-specific patterns for scoped ignores
-- Negative patterns with `!` for pattern negation
-- Path matching with `/` prefix for root-relative patterns
-- Directory-only patterns (ending with `/`)
-- Pattern normalization and `**/` pattern support
+### File Processing
 
-### Binary File Detection
-
-- Smart UTF-8 decoding attempt to detect binary files
-- Configurable detection threshold
-- Ensures output integrity by excluding non-text content
-- Proper handling of various text encodings
-
-### Gitignore Processing
-
-- Multiple `.gitignore` files support with proper precedence rules
-- Pattern processing order matches Git behavior
-- Scoped rules based on `.gitignore` file location
-- Full support for pattern negation and complex rule combinations
-
-### Memory Efficiency
-
-- Efficient file handling using buffered I/O
-- Streaming output for large files
-- Minimal memory footprint even with large codebases
+- Binary detection through UTF-8 decoding attempt
+- Streaming file I/O for memory efficiency
 - Proper resource cleanup
+- Robust error handling
+
+### Performance Optimization
+
+- Memory-efficient file processing
+- Streaming output generation
+- Minimal memory footprint
+- High-performance pattern matching through gitignore-filter
 
 ## Contributing
 
-We welcome contributions! Here's how you can help:
-- Submit pull requests for bug fixes or new features
-- Report bugs and suggest improvements
+Contributions are welcome! Here's how you can help:
+- Submit bug reports and feature requests
 - Improve documentation and examples
-- Share use cases and feature ideas
+- Share use cases and ideas
+- Submit pull requests
 
 Please feel free to open issues or submit pull requests on GitHub.
 
