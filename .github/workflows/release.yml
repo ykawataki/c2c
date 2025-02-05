@@ -124,7 +124,7 @@ jobs:
           EOF
 
           # __init__.pyの更新
-          sed -i "s/__version__ = \".*\"/__version__ = \"$NEW_VERSION\"/" src/gitignore_filter/__init__.py
+          sed -i "s/__version__ = \".*\"/__version__ = \"$NEW_VERSION\"/" src/c2c/__init__.py
 
       - name: Generate changelog
         run: |
@@ -136,7 +136,7 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add pyproject.toml src/gitignore_filter/__init__.py CHANGELOG.md
+          git add pyproject.toml src/c2c/__init__.py CHANGELOG.md
           git commit -m "chore(release): bump version to ${{ needs.check-version.outputs.new_version }}"
 
       - name: Create and push tag
