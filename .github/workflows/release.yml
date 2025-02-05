@@ -1,24 +1,26 @@
-name: Release
+name: Version Bump and Release
 
 on:
   push:
-    tags:
-      - "v*.*.*"
-
-permissions:
-  contents: write
-  pull-requests: write
+    branches:
+      - main
+    paths:
+      - "pyproject.toml"
+      - "src/**"
+      - ".github/workflows/release.yml"
 
 jobs:
-  release:
-    name: Create Release
+  check-version:
     runs-on: ubuntu-latest
+    outputs:
+      should_bump: ${{ steps.check_commits.outputs.should_bump }}
+      new_version: ${{ steps.check_commits.outputs.new_version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: main # 明示的にmainブランチを指定
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -26,22 +28,141 @@ jobs:
           node-version: "lts/*"
 
       - name: Install dependencies
-        run: npm install -g conventional-changelog-cli
+        run: |
+          npm install -g conventional-changelog-cli semver
+
+      - name: Check commits for version bump
+        id: check_commits
+        run: |
+          # タグの存在確認とバージョン取得
+          if git describe --tags --abbrev=0 2>/dev/null; then
+            LATEST_TAG=$(git describe --tags --abbrev=0)
+            echo "Latest tag: $LATEST_TAG"
+            COMMITS=$(git log ${LATEST_TAG}..HEAD --format="%s")
+            LATEST_VERSION=${LATEST_TAG#v}
+            echo "Current version: $LATEST_VERSION"
+            
+            # conventional commitsからバージョンアップの種類を判断
+            BUMP_TYPE=""
+            SHOULD_BUMP=false
+            
+            while read -r commit; do
+                # バージョンアップが必要なコミットタイプを定義
+                if [[ $commit == feat!:* ]] || [[ $commit == fix!:* ]] || [[ $commit == perf!:* ]] || [[ $commit == *"BREAKING CHANGE"* ]]; then
+                    SHOULD_BUMP=true
+                    BUMP_TYPE="major"
+                    break
+                elif [[ $commit == feat:* ]] && [[ $BUMP_TYPE != "major" ]]; then
+                    SHOULD_BUMP=true
+                    BUMP_TYPE="minor"
+                elif [[ $commit == fix:* ]] || [[ $commit == perf:* ]] && [[ $BUMP_TYPE != "major" ]] && [[ $BUMP_TYPE != "minor" ]]; then
+                    SHOULD_BUMP=true
+                    BUMP_TYPE="patch"
+                fi
+            done <<< "$COMMITS"
+            
+            if [[ $SHOULD_BUMP == false ]]; then
+              echo "No version bump required. Only documentation, style, test, build, or CI changes."
+              echo "should_bump=false" >> $GITHUB_OUTPUT
+              echo "new_version=${LATEST_VERSION}" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            # 新しいバージョンを計算
+            NEW_VERSION=$(semver $LATEST_VERSION -i $BUMP_TYPE)
+          else
+            echo "No tags found. Starting with v0.1.0"
+            echo "should_bump=true" >> $GITHUB_OUTPUT
+            echo "new_version=0.1.0" >> $GITHUB_OUTPUT
+          fi
+
+          echo "New version will be: v$NEW_VERSION"
+          echo "should_bump=true" >> $GITHUB_OUTPUT
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+  version-bump:
+    needs: check-version
+    if: needs.check-version.outputs.should_bump == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install tomli tomli-w build twine
+          npm install -g conventional-changelog-cli
+
+      - name: Update version in files
+        run: |
+          NEW_VERSION="${{ needs.check-version.outputs.new_version }}"
+
+          # pyproject.tomlの更新
+          python - <<EOF
+          import tomli, tomli_w
+          with open('pyproject.toml', 'rb') as f:
+              data = tomli.load(f)
+          data['project']['version'] = '$NEW_VERSION'
+          with open('pyproject.toml', 'wb') as f:
+              tomli_w.dump(data, f)
+          EOF
+
+          # __init__.pyの更新
+          sed -i "s/__version__ = \".*\"/__version__ = \"$NEW_VERSION\"/" src/gitignore_filter/__init__.py
 
       - name: Generate changelog
         run: |
-          conventional-changelog -p angular -i CHANGELOG.md -s -r 0
+          NEW_VERSION="${{ needs.check-version.outputs.new_version }}"
+          echo "{\"version\": \"$NEW_VERSION\"}" > /tmp/changelog-context.json
+          conventional-changelog -p conventionalcommits -i CHANGELOG.md -s -r 0 -t "v" -c /tmp/changelog-context.json --verbose
+
+      - name: Create version commit
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add pyproject.toml src/gitignore_filter/__init__.py CHANGELOG.md
+          git commit -m "chore(release): bump version to ${{ needs.check-version.outputs.new_version }}"
+
+      - name: Create and push tag
+        run: |
+          NEW_VERSION=${{ needs.check-version.outputs.new_version }}
+          git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}"
+          git push origin main --tags
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: v${{ needs.check-version.outputs.new_version }}
+          name: Release v${{ needs.check-version.outputs.new_version }}
           body_path: CHANGELOG.md
+          draft: false
+          prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Commit updated CHANGELOG
+      - name: Build package
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add CHANGELOG.md
-          git commit -m "docs: update changelog for ${{ github.ref_name }}" || exit 0
-          git push origin main # 明示的にmainブランチを指定してプッシュ
+          python -m build
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          pip install twine
+          twine upload dist/*
