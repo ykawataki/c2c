@@ -30,6 +30,11 @@ A Python package that converts a directory structure into a single text file, pr
   - Preserves directory structure and file relationships
   - Clear metadata and file boundaries
 
+## Requirements
+
+- Python 3.7 or higher
+- gitignore-filter 0.2.2 or higher
+
 ## Installation
 
 Install from PyPI:
@@ -58,6 +63,26 @@ Scan specific directory:
 c2c /path/to/directory
 ```
 
+Choose output format:
+```bash
+# Default text format - human-readable with clear file boundaries
+c2c .
+
+# JSONL format - machine-readable, perfect for programmatic processing
+c2c . --format jsonl
+```
+
+Text format is ideal for:
+- Sharing code with AI language models
+- Creating human-readable project snapshots
+- Quick code reviews
+
+JSONL format is better for:
+- Programmatic processing of code
+- Integration with data pipelines
+- Structured data analysis
+- Building development tools
+
 Exclude specific patterns using gitignore format:
 ```bash
 # Exclude all log files
@@ -84,7 +109,11 @@ c2c . --debug
 
 Save output to file:
 ```bash
+# Text format
 c2c . > project_snapshot.txt
+
+# JSONL format
+c2c . --format jsonl > project_snapshot.jsonl
 ```
 
 ### Python API
@@ -92,22 +121,18 @@ c2c . > project_snapshot.txt
 The package provides a simple Python API for integration into your tools:
 
 ```python
-from c2c import scan_directory, create_delimiter
+from c2c import scan_directory
 
-# Generate a unique delimiter
-delimiter = create_delimiter()
-
-# Basic usage
+# Basic usage with text format
 with open('output.txt', 'w', encoding='utf-8') as output_file:
     scan_directory(
         directory=".",
         exclude_patterns=[".git"],  # Default exclude pattern
-        delimiter=delimiter,
         output_file=output_file
     )
 
-# With custom patterns
-with open('output.txt', 'w', encoding='utf-8') as output_file:
+# With JSONL format and custom patterns
+with open('output.jsonl', 'w', encoding='utf-8') as output_file:
     scan_directory(
         directory="/path/to/project",
         exclude_patterns=[
@@ -116,8 +141,8 @@ with open('output.txt', 'w', encoding='utf-8') as output_file:
             "temp/*",
             "!important.log"
         ],
-        delimiter=delimiter,
         output_file=output_file,
+        format="jsonl",
         debug=True
     )
 ```
@@ -138,23 +163,19 @@ Here's my project structure and contents:
 Could you help me understand the code structure and suggest improvements?
 ```
 
-The output format is designed for optimal use with AI models:
-- Clear file boundaries with unique delimiters
-- Preserved directory structure and relationships
-- Metadata about excluded files and patterns
-- UTF-8 encoded text content only
+## Output Formats
 
-## Output Format
+### Text Format
 
-The generated output follows this structure:
+The text format is human-readable and follows this structure:
 
 ```
 # Project Directory Contents
-# Format: Files are separated by a delimiter line starting with "### FILE_[uuid]"
-# Each delimiter line is followed by the file path, then the file contents.
-# Note: Binary files and patterns matching any .gitignore are excluded.
+Format: Files are separated by a delimiter line starting with "### FILE_[uuid]"
+Each delimiter line is followed by the file path, then the file contents.
+Note: Binary files and patterns matching any .gitignore are excluded.
 
-# DELIMITER=### FILE_[uuid]
+DELIMITER=### FILE_[uuid]
 
 ### FILE_[uuid] src/main.py
 [contents of main.py]
@@ -162,6 +183,19 @@ The generated output follows this structure:
 ### FILE_[uuid] src/utils/helper.py
 [contents of helper.py]
 ```
+
+### JSONL Format
+
+The JSONL format provides structured data where each line is a valid JSON object:
+
+```jsonl
+{"path": "src/main.py", "content": "print('Hello, World!')"}
+{"path": "src/utils/helper.py", "content": "def helper():\n    pass"}
+```
+
+Each line contains:
+- `path`: Relative path to the file within the project
+- `content`: Complete content of the file
 
 ## Default Behavior
 

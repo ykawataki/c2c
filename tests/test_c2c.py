@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from c2c.c2c import (create_delimiter, create_header, is_binary_file,
+from c2c.c2c import (create_delimiter, create_text_header, is_binary_file,
                      scan_directory)
 
 
@@ -33,9 +33,9 @@ class TestFileOperations(unittest.TestCase):
         self.assertTrue(delimiter.startswith("### FILE_"))
         self.assertEqual(len(delimiter), len("### FILE_xxxxxx "))
 
-    def test_create_header(self):
+    def test_create_text_header(self):
         delimiter = create_delimiter()
-        header = create_header(delimiter)
+        header = create_text_header(delimiter)
         self.assertIn(delimiter.strip(), header)
         self.assertIn("Project Directory Contents", header)
 
@@ -55,19 +55,19 @@ class TestDirectoryScanning(unittest.TestCase):
         os.makedirs(os.path.join(self.temp_dir, "docs"))
 
         # Create text files
-        files = {
+        self.files = {
             "src/main.py": "print('Hello, World!')",
             "src/util.py": "def helper(): pass",
             "docs/readme.txt": "Documentation",
             ".gitignore": "*.txt\n!docs/*.txt"
         }
 
-        for path, content in files.items():
+        for path, content in self.files.items():
             full_path = os.path.join(self.temp_dir, path)
             with open(full_path, "w", encoding="utf-8") as f:
                 f.write(content)
 
-    def test_scan_directory(self):
+    def test_scan_directory_text_format(self):
         # Redirect stdout to capture output
         import io
         import sys
@@ -78,8 +78,7 @@ class TestDirectoryScanning(unittest.TestCase):
             # 一時ファイルにスキャン結果を書き出す
             with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8', delete=False) as temp_file:
                 temp_path = temp_file.name
-                delimiter = create_delimiter()
-                scan_directory(self.temp_dir, [".git"], delimiter, temp_file)
+                scan_directory(self.temp_dir, [".git"], temp_file)
 
             # 一時ファイルの内容を captured_output に書き出す
             with open(temp_path, 'r', encoding='utf-8') as f:
@@ -102,6 +101,55 @@ class TestDirectoryScanning(unittest.TestCase):
         finally:
             sys.stdout = sys.__stdout__
 
+    def test_scan_directory_jsonl_format(self):
+        import io
+        import json
+        import sys
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
 
-if __name__ == "__main__":
-    unittest.main()
+        try:
+            with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8', delete=False) as temp_file:
+                temp_path = temp_file.name
+                scan_directory(
+                    self.temp_dir,
+                    [".git"],
+                    temp_file,
+                    format="jsonl"
+                )
+
+            with open(temp_path, 'r', encoding='utf-8') as f:
+                captured_output.write(f.read())
+
+            os.unlink(temp_path)
+
+            output = captured_output.getvalue()
+
+            # Verify header is present
+            self.assertIn("Project Source Code (JSONL Format)", output)
+            self.assertIn("Schema:", output)
+
+            # Split output into lines and filter out header comments
+            lines = [line for line in output.split(
+                '\n') if line and not line.startswith('#') and line.startswith('{') and line.endswith('}')]
+
+            # Parse each line as JSON and verify
+            parsed_files = {}
+            for line in lines:
+                file_data = json.loads(line)
+                self.assertIn("path", file_data)
+                self.assertIn("content", file_data)
+                parsed_files[file_data["path"]] = file_data["content"]
+
+            # Verify all expected files are present with correct content
+            for path, expected_content in self.files.items():
+                self.assertIn(path, parsed_files)
+                self.assertEqual(parsed_files[path], expected_content)
+
+            # Verify JSON structure
+            sample_line = json.loads(lines[0])
+            self.assertIsInstance(sample_line["path"], str)
+            self.assertIsInstance(sample_line["content"], str)
+
+        finally:
+            sys.stdout = sys.__stdout__
