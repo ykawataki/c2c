@@ -1,12 +1,14 @@
 [build-system]
-requires = ["hatchling"]
+requires = [
+    "hatchling",
+]
 build-backend = "hatchling.build"
 
 [project]
 name = "c2c"
-version = "1.0.4"
+version = "1.1.0"
 authors = [
-    { name="Yoshikazu Kawataki", email="y.kawataki@gmail.com" },
+    { name = "Yoshikazu Kawataki", email = "y.kawataki@gmail.com" },
 ]
 description = "Convert directory structure into a single text file while respecting .gitignore rules"
 readme = "README.md"
@@ -25,10 +27,12 @@ classifiers = [
 ]
 
 [project.urls]
-"Source" = "https://github.com/ykawataki/c2c"
+Source = "https://github.com/ykawataki/c2c"
 
 [project.scripts]
 c2c = "c2c.c2c:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/c2c"]
+packages = [
+    "src/c2c",
+]
